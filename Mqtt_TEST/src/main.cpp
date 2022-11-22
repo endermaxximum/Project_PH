@@ -27,7 +27,10 @@ const uint16_t DO_Table[41] = {
     11260, 11010, 10770, 10530, 10300, 10080, 9860, 9660, 9460, 9270,
     9080, 8900, 8730, 8570, 8410, 8250, 8110, 7960, 7820, 7690,
     7560, 7430, 7300, 7180, 7070, 6950, 6840, 6730, 6630, 6530, 6410};
-
+// S0 - S3 
+int s0 = D3;
+int s1 = D2;
+int s2 = D1;
 uint8_t Temperaturet;
 uint16_t ADC_Raw;
 uint16_t ADC_Voltage;
@@ -54,9 +57,7 @@ int16_t readDO(uint32_t voltage_mv, uint8_t temperature_c)
 #define MQTT_PUB_PH "sensor/PH/ph"
 #define MQTT_PUB_DO "sensor/DO/do"
 
-int DO_PIN = A0; // DO sensor
-
-int pHSense = 2; // PH sensor
+int Analog_PIN = A0; // DO sensor , PH sensor
 float calibration_value = 21.34 - 0.7;
 int buffer_arr[10], tempPH;
 float ph_act;
@@ -91,6 +92,9 @@ void setup()
 {
   // Setup Serial baudrate
   Serial.begin(115200);
+  pinMode(s0, OUTPUT);
+  pinMode(s1, OUTPUT);
+  pinMode(s2, OUTPUT);
   dht.begin();
   sensors.begin();
   // Connect to Wifi
@@ -134,6 +138,55 @@ void reconnect()
         time_now += Mqtt_period;
       }
     }
+  }
+}
+
+void inputMultiplekser(int y){ //Analog Extender
+  if (y==0){
+    digitalWrite(s0,LOW);
+    digitalWrite(s1,LOW);
+    digitalWrite(s2,LOW);
+  }
+  else if (y==1){
+    digitalWrite(s0,HIGH);
+    digitalWrite(s1,LOW);
+    digitalWrite(s2,LOW);
+  }
+  else if (y==2){
+    digitalWrite(s0,LOW);
+    digitalWrite(s1,HIGH);
+    digitalWrite(s2,LOW);
+  }
+  else if (y==3){
+    digitalWrite(s0,HIGH);
+    digitalWrite(s1,HIGH);
+    digitalWrite(s2,LOW);
+  }
+  else if (y==4){
+    digitalWrite(s0,LOW);
+    digitalWrite(s1,LOW);
+    digitalWrite(s2,HIGH);
+  }
+  else if (y==5){
+    digitalWrite(s0,HIGH);
+    digitalWrite(s1,LOW);
+    digitalWrite(s2,HIGH);
+  }
+  else if (y==6){
+    digitalWrite(s0,LOW);
+    digitalWrite(s1,HIGH);
+    digitalWrite(s2,HIGH);
+  }
+  else if (y==7){
+    digitalWrite(s0,HIGH);
+    digitalWrite(s1,HIGH);
+    digitalWrite(s2,HIGH);
+  }
+  //jika input bukan 0-7, maka jadikan y0
+  else {
+    digitalWrite(s0,LOW);
+    digitalWrite(s1,LOW);
+    digitalWrite(s2,LOW);
   }
 }
 
@@ -201,9 +254,10 @@ float ph(float voltage)
 
 void ph_read()
 {
+  inputMultiplekser(1); //read analog pin CH2
   for (int i = 0; i < 10; i++)
   {
-    buffer_arr[i] = analogRead(A0);
+    buffer_arr[i] = analogRead(Analog_PIN);
     delay(30);
   }
   for (int i = 0; i < 9; i++)
@@ -234,10 +288,11 @@ void ph_read()
 
 void read_DO()
 {
+  inputMultiplekser(0); //read analog at CH1
   if (millis() >= time_now + HCSR04_period)
   {
     Temperaturet = (uint8_t)READ_TEMP;
-    ADC_Raw = analogRead(DO_PIN);
+    ADC_Raw = analogRead(Analog_PIN);
     ADC_Voltage = uint32_t(VREF) * ADC_Raw / ADC_RES;
 
     Serial.print("Temperaturet:\t" + String(Temperaturet) + "\t");
